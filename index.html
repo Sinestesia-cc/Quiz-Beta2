@@ -1,14 +1,93 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="es">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | Vipro</title>
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes">
+    <title>Vipro - Estudio de Casas</title>
+    
+    <!-- Metadatos PWA -->
+    <meta name="description" content="Aplicación para visualizar casos de estudio de casas en 2D y 360° para zonas rurales">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Vipro">
+    <link rel="apple-touch-icon" href="TemplateData/icons/unity-logo-dark.png">
+    
+    <!-- Recursos básicos -->
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
     <link rel="manifest" href="manifest.webmanifest">
+    
+    <!-- Estilos para botón de instalación -->
+    <style>
+      #installButton {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        display: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      }
+      
+      #offlineIndicator {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background-color: #ff9800;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 9999;
+        display: none;
+      }
+      
+      #cacheProgress {
+        position: fixed;
+        bottom: 70px;
+        right: 20px;
+        width: 250px;
+        background-color: rgba(0,0,0,0.1);
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        display: none;
+        z-index: 9999;
+      }
+      
+      #cacheProgressBar {
+        height: 100%;
+        width: 0%;
+        background-color: #4CAF50;
+        transition: width 0.3s;
+      }
+      
+      #cacheStatus {
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        font-size: 12px;
+        color: #333;
+        display: none;
+        z-index: 9999;
+      }
+    </style>
   </head>
   <body>
+    <!-- Botón de instalación -->
+    <button id="installButton">Instalar aplicación</button>
+    <div id="offlineIndicator">Modo sin conexión</div>
+    <div id="cacheProgress"><div id="cacheProgressBar"></div></div>
+    <div id="cacheStatus">Preparando para uso offline...</div>
+    
     <div id="unity-container">
       <canvas id="unity-canvas" width=1280 height=720 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -19,25 +98,168 @@
       </div>
       <div id="unity-warning"> </div>
     </div>
+    
     <script>
+      // Verificar estado de conexión
+      function updateOnlineStatus() {
+        const indicator = document.getElementById('offlineIndicator');
+        if (navigator.onLine) {
+          indicator.style.display = 'none';
+        } else {
+          indicator.style.display = 'block';
+        }
+      }
+      
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+      updateOnlineStatus();
+      
+      // Registrar Service Worker
       window.addEventListener("load", function () {
         if ("serviceWorker" in navigator) {
-          navigator.serviceWorker.register("ServiceWorker.js");
+          navigator.serviceWorker.register("ServiceWorker.js")
+            .then(registration => {
+              console.log("Service Worker registrado con éxito:", registration.scope);
+              // Forzar actualización del Service Worker
+              registration.update();
+            })
+            .catch(error => {
+              console.error("Error al registrar Service Worker:", error);
+            });
         }
       });
-
+      
+      // Manejo de instalación PWA
+      let deferredPrompt;
+      const installButton = document.getElementById('installButton');
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevenir que Chrome muestre automáticamente el prompt
+        e.preventDefault();
+        
+        // Guardar el evento para usarlo después
+        deferredPrompt = e;
+        
+        // Mostrar el botón de instalación
+        installButton.style.display = 'block';
+      });
+      
+      installButton.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        
+        // Mostrar el prompt de instalación
+        deferredPrompt.prompt();
+        
+        // Esperar la respuesta del usuario
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`Usuario eligió: ${outcome}`);
+        
+        // Limpiar la variable
+        deferredPrompt = null;
+        
+        // Ocultar el botón si el usuario ya instaló la app
+        if (outcome === 'accepted') {
+          installButton.style.display = 'none';
+        }
+      });
+      
+      // Si la app ya está instalada, el botón no debe mostrarse
+      window.addEventListener('appinstalled', () => {
+        installButton.style.display = 'none';
+        console.log('Aplicación instalada correctamente');
+      });
+      
+      // Pre-caché del archivo grande (Build PWA.data)
+      function cacheDataFile() {
+        const cacheProgress = document.getElementById('cacheProgress');
+        const cacheProgressBar = document.getElementById('cacheProgressBar');
+        const cacheStatus = document.getElementById('cacheStatus');
+        
+        // Mostrar progreso
+        cacheProgress.style.display = 'block';
+        cacheStatus.style.display = 'block';
+        
+        // Verificar si el navegador está online
+        if (!navigator.onLine) {
+          cacheStatus.textContent = 'Sin conexión. Usando versión cacheada.';
+          setTimeout(() => {
+            cacheProgress.style.display = 'none';
+            cacheStatus.style.display = 'none';
+          }, 3000);
+          return;
+        }
+        
+        // Solicitar caché del archivo grande
+        fetch('Build/Build PWA.data')
+          .then(response => {
+            const contentLength = response.headers.get('content-length');
+            if (!contentLength) {
+              throw new Error('Tamaño de contenido no disponible');
+            }
+            
+            const total = parseInt(contentLength);
+            let loaded = 0;
+            
+            // Crear un lector de stream para monitorear el progreso
+            const reader = response.body.getReader();
+            
+            return new ReadableStream({
+              start(controller) {
+                function push() {
+                  reader.read().then(({ done, value }) => {
+                    if (done) {
+                      controller.close();
+                      return;
+                    }
+                    
+                    loaded += value.byteLength;
+                    const progress = Math.round((loaded / total) * 100);
+                    cacheProgressBar.style.width = progress + '%';
+                    cacheStatus.textContent = `Preparando para uso offline: ${progress}%`;
+                    
+                    controller.enqueue(value);
+                    push();
+                  });
+                }
+                
+                push();
+              }
+            });
+          })
+          .then(stream => new Response(stream))
+          .then(response => {
+            // Solicitar al service worker que lo guarde en caché
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'CACHE_LARGE_FILE',
+                url: 'Build/Build PWA.data'
+              });
+            }
+            
+            cacheStatus.textContent = 'Aplicación lista para uso offline';
+            setTimeout(() => {
+              cacheProgress.style.display = 'none';
+              cacheStatus.style.display = 'none';
+            }, 3000);
+          })
+          .catch(error => {
+            console.error('Error cacheando archivo grande:', error);
+            cacheStatus.textContent = 'Error preparando modo offline';
+            cacheProgressBar.style.backgroundColor = '#f44336';
+            setTimeout(() => {
+              cacheProgress.style.display = 'none';
+              cacheStatus.style.display = 'none';
+            }, 3000);
+          });
+      }
+      
+      // Llamar a la función después de cargar Unity
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
       var progressBarFull = document.querySelector("#unity-progress-bar-full");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -70,15 +292,7 @@
         showBanner: unityShowBanner,
       };
 
-      // By default Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -94,6 +308,8 @@
           progressBarFull.style.width = 100 * progress + "%";
         }).then((unityInstance) => {
           loadingBar.style.display = "none";
+          // Una vez cargado Unity, cachear archivos para uso offline
+          cacheDataFile();
         }).catch((message) => {
           alert(message);
         });
