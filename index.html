@@ -26,9 +26,9 @@
         bottom: 20px;
         right: 20px;
         z-index: 9999;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
+        background-color: white;
+        color: #1b1a55;
+        border: 1px solid #1b1a55;
         padding: 10px 20px;
         border-radius: 5px;
         cursor: pointer;
@@ -48,6 +48,7 @@
         font-size: 12px;
         z-index: 9999;
         display: none;
+        transition: opacity 0.5s;
       }
       
       #cacheProgress {
@@ -66,7 +67,7 @@
       #cacheProgressBar {
         height: 100%;
         width: 0%;
-        background-color: #4CAF50;
+        background-color: #1b1a55;
         transition: width 0.3s;
       }
       
@@ -101,12 +102,28 @@
     
     <script>
       // Verificar estado de conexión
+      let offlineTimerId = null;
+      
       function updateOnlineStatus() {
         const indicator = document.getElementById('offlineIndicator');
+        
+        // Limpiar cualquier temporizador existente
+        if (offlineTimerId) {
+          clearTimeout(offlineTimerId);
+          offlineTimerId = null;
+        }
+        
         if (navigator.onLine) {
           indicator.style.display = 'none';
         } else {
+          // Mostrar el indicador
           indicator.style.display = 'block';
+          
+          // Configurar un temporizador para ocultarlo después de 7 segundos
+          offlineTimerId = setTimeout(() => {
+            indicator.style.display = 'none';
+            offlineTimerId = null;
+          }, 7000);
         }
       }
       
