@@ -35,7 +35,6 @@
         font-weight: bold;
         display: none;
         box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        transition: opacity 0.5s;
       }
       
       #offlineIndicator {
@@ -150,7 +149,6 @@
       // Manejo de instalación PWA
       let deferredPrompt;
       const installButton = document.getElementById('installButton');
-      let installButtonTimer = null;
       
       window.addEventListener('beforeinstallprompt', (e) => {
         // Prevenir que Chrome muestre automáticamente el prompt
@@ -161,28 +159,10 @@
         
         // Mostrar el botón de instalación
         installButton.style.display = 'block';
-        
-        // Configurar temporizador para ocultar el botón después de 15 segundos
-        installButtonTimer = setTimeout(() => {
-          // Agregar transición de desvanecimiento
-          installButton.style.opacity = '0';
-          
-          // Ocultar completamente después de la transición
-          setTimeout(() => {
-            installButton.style.display = 'none';
-            installButton.style.opacity = '1'; // Restablecer opacidad para futuras apariciones
-          }, 500);
-        }, 15000); // 15 segundos
       });
       
       installButton.addEventListener('click', async () => {
         if (!deferredPrompt) return;
-        
-        // Cancelar el temporizador si el usuario hace clic en el botón
-        if (installButtonTimer) {
-          clearTimeout(installButtonTimer);
-          installButtonTimer = null;
-        }
         
         // Mostrar el prompt de instalación
         deferredPrompt.prompt();
@@ -194,19 +174,14 @@
         // Limpiar la variable
         deferredPrompt = null;
         
-        // Ocultar el botón de instalación
-        installButton.style.display = 'none';
+        // Ocultar el botón si el usuario ya instaló la app
+        if (outcome === 'accepted') {
+          installButton.style.display = 'none';
+        }
       });
       
       // Si la app ya está instalada, el botón no debe mostrarse
       window.addEventListener('appinstalled', () => {
-        // Cancelar cualquier temporizador existente
-        if (installButtonTimer) {
-          clearTimeout(installButtonTimer);
-          installButtonTimer = null;
-        }
-        
-        // Ocultar el botón inmediatamente
         installButton.style.display = 'none';
         console.log('Aplicación instalada correctamente');
       });
@@ -232,7 +207,7 @@
         }
         
         // Solicitar caché del archivo grande
-        fetch('Build/PWA 2.data')
+        fetch('Build/Build PWA.data')
           .then(response => {
             const contentLength = response.headers.get('content-length');
             if (!contentLength) {
@@ -274,7 +249,7 @@
             if (navigator.serviceWorker.controller) {
               navigator.serviceWorker.controller.postMessage({
                 type: 'CACHE_LARGE_FILE',
-                url: 'Build/PWA 2.data'
+                url: 'Build/Build PWA.data'
               });
             }
             
@@ -321,12 +296,12 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/PWA 2.loader.js";
+      var loaderUrl = buildUrl + "/Build PWA.loader.js";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/PWA 2.data",
-        frameworkUrl: buildUrl + "/PWA 2.framework.js",
-        codeUrl: buildUrl + "/PWA 2.wasm",
+        dataUrl: buildUrl + "/Build PWA.data",
+        frameworkUrl: buildUrl + "/Build PWA.framework.js",
+        codeUrl: buildUrl + "/Build PWA.wasm",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "Sinestesia",
         productName: "Vipro",
