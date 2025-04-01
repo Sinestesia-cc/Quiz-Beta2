@@ -232,7 +232,7 @@
         }
         
         // Solicitar caché del archivo grande
-        fetch('Build/Build PWA.data')
+        fetch('Build/PWA 2.data')
           .then(response => {
             const contentLength = response.headers.get('content-length');
             if (!contentLength) {
@@ -274,7 +274,7 @@
             if (navigator.serviceWorker.controller) {
               navigator.serviceWorker.controller.postMessage({
                 type: 'CACHE_LARGE_FILE',
-                url: 'Build/Build PWA.data'
+                url: 'Build/PWA 2.data'
               });
             }
             
@@ -321,12 +321,12 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/Build PWA.loader.js";
+      var loaderUrl = buildUrl + "/PWA 2.loader.js";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/Build PWA.data",
-        frameworkUrl: buildUrl + "/Build PWA.framework.js",
-        codeUrl: buildUrl + "/Build PWA.wasm",
+        dataUrl: buildUrl + "/PWA 2.data",
+        frameworkUrl: buildUrl + "/PWA 2.framework.js",
+        codeUrl: buildUrl + "/PWA 2.wasm",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "Sinestesia",
         productName: "Vipro",

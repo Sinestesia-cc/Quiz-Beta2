@@ -8,10 +8,10 @@ const contentToCache = [
   "./manifest.webmanifest",
   
   // Unity WebGL archivos compilados
-  "./Build/Build PWA.loader.js",
-  "./Build/Build PWA.framework.js",
-  "./Build/Build PWA.data",
-  "./Build/Build PWA.wasm",
+  "./Build/PWA 2.loader.js",
+  "./Build/PWA 2.framework.js",
+  "./Build/PWA 2.data",
+  "./Build/PWA 2.wasm",
   
   // Recursos de plantilla
   "./TemplateData/style.css",
